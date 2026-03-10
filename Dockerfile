@@ -15,7 +15,10 @@ RUN npm install
 # Copy application files
 COPY . .
 
-# Build the application
+# Build the application with environment variables
+ARG VITE_CONVEX_URL
+ENV VITE_CONVEX_URL=$VITE_CONVEX_URL
+
 RUN npm run build
 
 # Production stage with nginx
