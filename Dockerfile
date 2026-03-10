@@ -1,6 +1,9 @@
 # Build stage
 FROM node:18-alpine AS builder
 
+# Install Python and build tools required for native modules
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /usr/src/app
 
 # Copy dependency files
@@ -20,9 +23,6 @@ FROM nginx:alpine
 
 # Copy built files from builder stage
 COPY --from=builder /usr/src/app/dist /usr/share/nginx/html
-
-# Copy custom nginx config (optional, uses default if not provided)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port 80
 EXPOSE 80
