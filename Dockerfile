@@ -1,34 +1,6 @@
-# Use an Ubuntu base image
-FROM ubuntu:22.04
+# Build stage
+FROM node:18-alpine AS builder
 
-# Install dependencies
-RUN apt-get update && \
-    apt-get install -y \
-    curl \
-    python3 \
-    python3-pip \
-    unzip \
-    socat \
-    build-essential \
-    libssl-dev \
-    iproute2 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install NVM, Node.js, and npm
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash && \
-    export NVM_DIR="$HOME/.nvm" && \
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" && \
-    nvm install 18 && \
-    nvm use 18
-
-# Add NVM to PATH
-ENV NVM_DIR /root/.nvm
-ENV NODE_VERSION 18.0.0
-RUN . $NVM_DIR/nvm.sh && nvm install $NODE_VERSION
-ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
-ENV PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
-
-# Set the working directory
 WORKDIR /usr/src/app
 
 # Copy dependency files
@@ -37,12 +9,23 @@ COPY package*.json ./
 # Install npm dependencies
 RUN npm install
 
-RUN npx update-browserslist-db@latest
-
 # Copy application files
 COPY . .
 
-# Expose necessary ports
-EXPOSE 5173
+# Build the application
+RUN npm run build
 
-CMD ["npx", "vite", "--host"]
+# Production stage with nginx
+FROM nginx:alpine
+
+# Copy built files from builder stage
+COPY --from=builder /usr/src/app/dist /usr/share/nginx/html
+
+# Copy custom nginx config (optional, uses default if not provided)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
