@@ -6,7 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQuery, useAction } from 'convex/react';
-import { api } from '../../_generated/api';
+import { api } from '../../../convex/_generated/api';
 
 // ============================================================================
 // TIPOS
@@ -62,7 +62,7 @@ export function SurveyDashboard() {
         runId: `cadem-${Date.now()}`,
         surveyId: 'cadem-calibration',
         agentIds,
-        questions: calibrationQuestions.map(q => ({
+        questions: calibrationQuestions.map((q: any) => ({
           code: q.code,
           type: q.type,
           topic: q.topic,
@@ -102,7 +102,7 @@ export function SurveyDashboard() {
               <h3 className="text-lg font-medium mb-2">Preguntas Cadem</h3>
               {calibrationQuestions ? (
                 <ul className="space-y-2">
-                  {calibrationQuestions.map((q, idx) => (
+                  {calibrationQuestions.map((q: any, idx: number) => (
                     <li key={q.code} className="bg-gray-700 rounded p-3">
                       <span className="text-blue-400 font-mono text-sm">{q.code}</span>
                       <p className="mt-1">{q.text}</p>
@@ -135,7 +135,7 @@ export function SurveyDashboard() {
             <h2 className="text-2xl font-semibold mb-4">Resultados</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {results.stats.map((stat) => (
+              {results.stats.map((stat: any) => (
                 <ResultCard key={stat.questionCode} stat={stat} />
               ))}
             </div>

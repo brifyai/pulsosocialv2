@@ -143,33 +143,6 @@ export const calculateResponse = query({
   },
 });
 
-/**
- * Ejecuta una encuesta completa a múltiples agentes
- */
-export const executeSurveyRun = action({
-  args: {
-    runId: v.string(),
-    surveyId: v.string(),
-    agentIds: v.array(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const results: Array<{
-      agentId: string;
-      questionCode: string;
-      response: any;
-    }> = [];
-    
-    // Procesar cada agente
-    for (const agentId of args.agentIds) {
-      // Obtener preguntas de la encuesta
-      // Para cada pregunta, calcular respuesta
-      // Guardar respuestas
-    }
-    
-    return { completed: true, totalResponses: results.length };
-  },
-});
-
 // ============================================================================
 // MOTOR DE CALCULO DE RESPUESTAS
 // ============================================================================
@@ -567,8 +540,8 @@ export const executeAgentSurvey = action({
   handler: async (ctx, args) => {
     const results = [];
     
-    // 1. Obtener datos del agente
-    const agentData = await ctx.runAction(internal.surveyEngine.getAgentData, {
+    // 1. Obtener datos del agente (usamos _current_ module)
+    const agentData = await ctx.runAction(internal.getAgentData, {
       agentId: args.agentId,
     });
     
@@ -608,7 +581,7 @@ export const executeAgentSurvey = action({
       });
       
       // 3. Registrar respuesta
-      await ctx.runAction(internal.surveyEngine.registerResponse, {
+      await ctx.runAction(internal.registerResponse, {
         runId: args.runId,
         agentId: args.agentId,
         questionCode: question.code,
@@ -647,7 +620,7 @@ export const executeSurveyRun = action({
     
     for (const agentId of args.agentIds) {
       try {
-        const results = await ctx.runAction(internal.surveyEngine.executeAgentSurvey, {
+        const results = await ctx.runAction(internal.executeAgentSurvey, {
           runId: args.runId,
           agentId,
           questions: args.questions,
