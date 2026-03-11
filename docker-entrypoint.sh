@@ -6,6 +6,18 @@ echo "  Injecting environment variables..."
 echo "============================================"
 echo ""
 
+# Debug: Print ALL environment variables (filtered for security)
+echo "DEBUG: All environment variables:"
+env | grep -E "^(VITE_|REACT_APP_|SUPABASE|CONVEX|URL|KEY)" | sed 's/KEY=.*/KEY=***/' | sed 's/PASS=.*/PASS=***/'
+echo ""
+
+# Debug: Print specific variables we need
+echo "DEBUG: Specific variables:"
+echo "  VITE_SUPABASE_URL='${VITE_SUPABASE_URL:-'(NOT SET)'}'"
+echo "  VITE_CONVEX_URL='${VITE_CONVEX_URL:-'(NOT SET)'}'"
+echo "  VITE_SUPABASE_ANON_KEY='${VITE_SUPABASE_ANON_KEY:+***SET***}${VITE_SUPABASE_ANON_KEY:-'(NOT SET)'}'"
+echo ""
+
 # Create window object with env vars for runtime access
 # This allows changing URLs without rebuild
 cat > /usr/share/nginx/html/env.js << EOF
