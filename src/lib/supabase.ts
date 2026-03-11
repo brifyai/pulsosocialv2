@@ -52,5 +52,18 @@ const getSupabaseAnonKey = (): string => {
 
 export const supabase = createClient(
   getSupabaseUrl(),
-  getSupabaseAnonKey()
+  getSupabaseAnonKey(),
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
+    },
+  }
 );
