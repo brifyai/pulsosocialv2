@@ -296,9 +296,13 @@ def generate_memory(agent: Dict[str, Any]) -> Dict[str, Any]:
     topics = ["economia", "salud", "educacion", "seguridad", "vivienda", "pensiones", "medio_ambiente"]
     salient = random.sample(topics, k=random.randint(1, 3))
     
+    # Escapar apóstrofes en el summary para SQL
+    region_escaped = escape_sql_string(agent["region"])
+    education_escaped = escape_sql_string(agent["education"])
+    
     return {
         "agent_id": agent["id"],
-        "summary": f"Agente de {agent['region']}, {agent['age']} años, {agent['education']}",
+        "summary": f"Agente de {region_escaped}, {agent['age']} años, {education_escaped}",
         "salient_topics": salient,
         "previous_positions": {},
         "contradiction_score": round(random.uniform(0, 0.2), 4),
