@@ -59,39 +59,4 @@ export default PixiComponent('Viewport', {
       }
     });
   },
-  // Fix: Agregar destroy personalizado para manejar el cleanup correctamente
-  // El error "Cannot read properties of null (reading 'removeEventListener')"
-  // ocurre porque pixi-viewport intenta remover listeners de un objeto null
-  // 
-  // Solución: Simplemente marcar como destruido sin llamar a métodos que puedan fallar
-  destroy(instance) {
-    if (instance) {
-      // Remover event listeners de forma segura
-      try {
-        if (typeof instance.removeAllListeners === 'function') {
-          instance.removeAllListeners();
-        }
-      } catch (e) {
-        // Ignorar errores al remover listeners
-      }
-      
-      // Marcar como destruido y limpiar referencias
-      try {
-        instance.destroyed = true;
-        // Limpiar referencias internas que podrían causar memory leaks
-        // @ts-expect-error - propiedades internas de pixi-viewport
-        if (instance.plugins) {
-          // @ts-expect-error
-          instance.plugins = {};
-        }
-        // @ts-expect-error
-        if (instance._events) {
-          // @ts-expect-error
-          instance._events = {};
-        }
-      } catch (e) {
-        // Ignorar errores durante la limpieza
-      }
-    }
-  },
 });
