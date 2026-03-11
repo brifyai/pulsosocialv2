@@ -43,11 +43,11 @@ FROM nginx:alpine
 # Install envsubst for runtime environment variable substitution
 RUN apk add --no-cache gettext
 
-# Copy nginx configuration template
-COPY nginx.conf /etc/nginx/conf.d/default.conf.template
-
-# Copy built files from builder stage
+# Copy built files from builder stage FIRST (this changes less often)
 COPY --from=builder /usr/src/app/dist /usr/share/nginx/html
+
+# Copy nginx configuration template LAST (changes more often, invalidates cache)
+COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
 # Create script for runtime env injection
 COPY docker-entrypoint.sh /docker-entrypoint.sh
