@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './lib/debugSupabaseUrl'; // Debug: interceptar fetches a /supabase-proxy
 import Home from './App.tsx';
 import './index.css';
 import 'uplot/dist/uPlot.min.css';
