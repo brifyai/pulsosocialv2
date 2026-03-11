@@ -1,4 +1,6 @@
 # Build stage
+# CACHE_BUST is a dummy arg to force rebuild - update value to invalidate cache
+ARG CACHE_BUST=1
 FROM node:18-alpine AS builder
 
 # Install Python and build tools required for native modules
