@@ -324,6 +324,11 @@ def generate_state(agent: Dict[str, Any]) -> Dict[str, Any]:
 # GENERACIÓN DE SQL
 # ============================================================================
 
+def escape_sql_string(s: str) -> str:
+    """Escapa apóstrofes para strings SQL"""
+    return s.replace("'", "''")
+
+
 def generate_insert_sql(agents: List[Dict], traits: List[Dict], 
                         memories: List[Dict], states: List[Dict]) -> str:
     """Genera archivo SQL con INSERTs"""
@@ -342,9 +347,9 @@ def generate_insert_sql(agents: List[Dict], traits: List[Dict],
     agent_values = []
     for a in agents:
         agent_values.append(f"""(
-    '{a['id']}', '{a['region']}', '{a['comuna']}', '{a['urban_rural']}', 
+    '{a['id']}', '{escape_sql_string(a['region'])}', '{escape_sql_string(a['comuna'])}', '{a['urban_rural']}', 
     '{a['sex']}', {a['age']}, '{a['education']}', {a['income_decile']}, 
-    '{a['occupation']}', '{a['household_type']}', '{a['connectivity_type']}', 
+    '{escape_sql_string(a['occupation'])}', '{a['household_type']}', '{a['connectivity_type']}', 
     {a['weight']}, NOW(), NOW(), 1
 )""")
     sql_parts.append(",\n".join(agent_values) + ";")
