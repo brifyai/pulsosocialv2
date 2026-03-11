@@ -193,7 +193,7 @@ export class Conversation {
   stop(game: Game, now: number) {
     delete this.isTyping;
     for (const [playerId, member] of this.participants.entries()) {
-      const agent = [...game.world.agents.values()].find((a) => a.playerId === playerId);
+      const agent = [...game.world.agents.values()].find((a) => a.playerId === String(playerId));
       if (agent) {
         agent.lastConversation = now;
         agent.toRemember = this.id;

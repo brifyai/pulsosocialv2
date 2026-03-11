@@ -191,7 +191,7 @@ export const rankAndTouchMemories = internalMutation({
   },
   handler: async (ctx, args) => {
     const ts = Date.now();
-    const relatedMemories = await asyncMap(args.candidates, async ({ _id }) => {
+    const relatedMemories = await asyncMap(args.candidates, async ({ _id }: { _id: Id<'memoryEmbeddings'> }) => {
       const memory = await ctx.db
         .query('memories')
         .withIndex('embeddingId', (q) => q.eq('embeddingId', _id))
@@ -202,14 +202,14 @@ export const rankAndTouchMemories = internalMutation({
 
     // TODO: fetch <count> recent memories and <count> important memories
     // so we don't miss them in case they were a little less relevant.
-    const recencyScore = relatedMemories.map((memory) => {
+    const recencyScore = relatedMemories.map((memory: Memory) => {
       const hoursSinceAccess = (ts - memory.lastAccess) / 1000 / 60 / 60;
       return 0.99 ** Math.floor(hoursSinceAccess);
     });
     const relevanceRange = makeRange(args.candidates.map((c) => c._score));
-    const importanceRange = makeRange(relatedMemories.map((m) => m.importance));
+    const importanceRange = makeRange(relatedMemories.map((m: Memory) => m.importance));
     const recencyRange = makeRange(recencyScore);
-    const memoryScores = relatedMemories.map((memory, idx) => ({
+    const memoryScores = relatedMemories.map((memory: Memory, idx) => ({
       memory,
       overallScore:
         normalize(args.candidates[idx]._score, relevanceRange) +
@@ -218,7 +218,7 @@ export const rankAndTouchMemories = internalMutation({
     }));
     memoryScores.sort((a, b) => b.overallScore - a.overallScore);
     const accessed = memoryScores.slice(0, args.n);
-    await asyncMap(accessed, async ({ memory }) => {
+    await asyncMap(accessed, async ({ memory }: { memory: Memory }) => {
       if (memory.lastAccess < ts - MEMORY_ACCESS_THROTTLE) {
         await ctx.db.patch(memory._id, { lastAccess: ts });
       }
@@ -338,8 +338,8 @@ async function reflectOnMemories(
 
   // should only reflect if lastest 100 items have importance score of >500
   const sumOfImportanceScore = memories
-    .filter((m) => m._creationTime > (lastReflectionTs ?? 0))
-    .reduce((acc, curr) => acc + curr.importance, 0);
+    .filter((m: Memory) => m._creationTime > (lastReflectionTs ?? 0))
+    .reduce((acc, curr: Memory) => acc + curr.importance, 0);
   const shouldReflect = sumOfImportanceScore > 500;
 
   if (!shouldReflect) {
@@ -348,7 +348,7 @@ async function reflectOnMemories(
   console.debug('sum of importance score = ', sumOfImportanceScore);
   console.debug('Reflecting...');
   const prompt = ['[no prose]', '[Output only JSON]', `You are ${name}, statements about you:`];
-  memories.forEach((m, idx) => {
+  memories.forEach((m: Memory, idx) => {
     prompt.push(`Statement ${idx}: ${m.description}`);
   });
   prompt.push('What 3 high-level insights can you infer from the above statements?');

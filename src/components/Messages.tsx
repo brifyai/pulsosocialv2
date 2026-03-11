@@ -38,7 +38,7 @@ export function Messages({
   }
   const currentlyTypingName =
     currentlyTyping &&
-    descriptions?.playerDescriptions.find((p) => p.playerId === currentlyTyping?.playerId)?.name;
+    descriptions?.playerDescriptions.find((p: { playerId: string; name: string }) => p.playerId === currentlyTyping?.playerId)?.name;
 
   const scrollView = scrollViewRef.current;
   const isScrolledToBottom = useRef(false);
@@ -68,7 +68,7 @@ export function Messages({
   if (messages.length === 0 && !inConversationWithMe) {
     return null;
   }
-  const messageNodes: { time: number; node: React.ReactNode }[] = messages.map((m) => {
+  const messageNodes: { time: number; node: React.ReactNode }[] = messages.map((m: Doc<'messages'>) => {
     const node = (
       <div key={`text-${m._id}`} className="leading-tight mb-6">
         <div className="flex gap-4">
@@ -89,7 +89,7 @@ export function Messages({
   const membershipNodes: typeof messageNodes = [];
   if (conversation.kind === 'active') {
     for (const [playerId, m] of conversation.doc.participants) {
-      const playerName = descriptions?.playerDescriptions.find((p) => p.playerId === playerId)
+      const playerName = descriptions?.playerDescriptions.find((p: { playerId: string; name: string }) => p.playerId === playerId)
         ?.name;
       let started;
       if (m.status.kind === 'participating') {
@@ -108,7 +108,7 @@ export function Messages({
     }
   } else {
     for (const playerId of conversation.doc.participants) {
-      const playerName = descriptions?.playerDescriptions.find((p) => p.playerId === playerId)
+      const playerName = descriptions?.playerDescriptions.find((p: { playerId: string; name: string }) => p.playerId === playerId)
         ?.name;
       const started = conversation.doc.created;
       membershipNodes.push({
@@ -133,7 +133,7 @@ export function Messages({
     }
   }
   const nodes = [...messageNodes, ...membershipNodes];
-  nodes.sort((a, b) => a.time - b.time);
+  nodes.sort((a: { time: number; node: React.ReactNode }, b: { time: number; node: React.ReactNode }) => a.time - b.time);
   return (
     <div className="chats text-base sm:text-sm">
       <div className="bg-brown-200 text-black p-2">

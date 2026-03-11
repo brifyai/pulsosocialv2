@@ -524,6 +524,16 @@ export const registerResponse = action({
   },
 });
 
+interface SurveyResult {
+  questionCode: string;
+  response: {
+    score: number;
+    selected_option: string;
+    confidence: number;
+    reason: string;
+  };
+}
+
 /**
  * Ejecuta encuesta completa a un agente
  */
@@ -538,7 +548,7 @@ export const executeAgentSurvey = action({
     })),
   },
   handler: async (ctx, args) => {
-    const results = [];
+    const results: SurveyResult[] = [];
     
     // 1. Obtener datos del agente (usamos _current_ module)
     const agentData = await ctx.runAction(internal.getAgentData, {
@@ -601,6 +611,11 @@ export const executeAgentSurvey = action({
   },
 });
 
+interface SurveyRunResult {
+  agentId: string;
+  results: SurveyResult[];
+}
+
 /**
  * Ejecuta encuesta completa a múltiples agentes
  */
@@ -616,7 +631,7 @@ export const executeSurveyRun = action({
     })),
   },
   handler: async (ctx, args) => {
-    const allResults = [];
+    const allResults: SurveyRunResult[] = [];
     
     for (const agentId of args.agentIds) {
       try {
