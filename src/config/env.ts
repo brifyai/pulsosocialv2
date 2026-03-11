@@ -52,13 +52,30 @@ const envPresets: Record<string, Partial<EnvConfig>> = {
  * Obtiene la configuración del entorno actual
  * 
  * Prioridad:
- * 1. Variables de Vite (import.meta.env)
- * 2. Variables de React (import.meta.env.REACT_APP_*)
- * 3. window.__ENV__ (runtime injection)
+ * 1. window.__ENV__ (runtime injection) - SI existe, es producción
+ * 2. Variables de Vite (import.meta.env) - build time
+ * 3. Variables de React (import.meta.env.REACT_APP_*)
  * 4. Valores por defecto
+ * 
+ * NOTA: En producción con Docker, window.__ENV__ es inyectado por
+ * docker-entrypoint.sh y tiene prioridad sobre las variables de build.
  */
 export function getEnvConfig(): EnvConfig {
-  // Intentar obtener de Vite primero
+  // Primero verificar window.__ENV__ (runtime injection de Docker)
+  const runtimeEnv = (window as any).__ENV__ as Partial<EnvConfig> | undefined;
+  
+  // Si existe window.__ENV__, estamos en producción Docker
+  if (runtimeEnv && runtimeEnv.VITE_SUPABASE_URL) {
+    console.log('[EnvConfig] Usando configuración runtime (Docker):', runtimeEnv);
+    return {
+      VITE_SUPABASE_URL: runtimeEnv.VITE_SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: runtimeEnv.VITE_SUPABASE_ANON_KEY || '',
+      VITE_CONVEX_URL: runtimeEnv.VITE_CONVEX_URL || '',
+      NODE_ENV: 'production',
+    };
+  }
+  
+  // Intentar obtener de Vite (build time)
   const viteSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   const viteSupabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
   const viteConvexUrl = import.meta.env.VITE_CONVEX_URL;
@@ -67,16 +84,14 @@ export function getEnvConfig(): EnvConfig {
   const reactSupabaseUrl = import.meta.env.REACT_APP_SUPABASE_URL;
   const reactSupabaseKey = import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
   
-  // Fallback a window.__ENV__ (runtime)
-  const runtimeEnv = (window as any).__ENV__ as Partial<EnvConfig> | undefined;
-  
   const config: EnvConfig = {
-    VITE_SUPABASE_URL: viteSupabaseUrl || reactSupabaseUrl || runtimeEnv?.VITE_SUPABASE_URL || defaultConfig.VITE_SUPABASE_URL,
-    VITE_SUPABASE_ANON_KEY: viteSupabaseKey || reactSupabaseKey || runtimeEnv?.VITE_SUPABASE_ANON_KEY || defaultConfig.VITE_SUPABASE_ANON_KEY,
-    VITE_CONVEX_URL: viteConvexUrl || runtimeEnv?.VITE_CONVEX_URL || defaultConfig.VITE_CONVEX_URL,
+    VITE_SUPABASE_URL: viteSupabaseUrl || reactSupabaseUrl || defaultConfig.VITE_SUPABASE_URL,
+    VITE_SUPABASE_ANON_KEY: viteSupabaseKey || reactSupabaseKey || defaultConfig.VITE_SUPABASE_ANON_KEY,
+    VITE_CONVEX_URL: viteConvexUrl || defaultConfig.VITE_CONVEX_URL,
     NODE_ENV: (import.meta.env.MODE as EnvConfig['NODE_ENV']) || 'development',
   };
   
+  console.log('[EnvConfig] Usando configuración build-time:', config);
   return config;
 }
 
