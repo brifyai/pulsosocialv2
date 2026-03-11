@@ -23,13 +23,25 @@ Este proyecto ahora usa **React puro con Vite** para el build estático, sin nec
 - **Output Directory**: `dist`
 - **Install Command**: `npm install`
 
-### 4. Configurar Dominio Personalizado
+### 4. Configurar Variables de Entorno (IMPORTANTE)
+
+En la sección de **Environment Variables**, agrega:
+
+```
+VITE_SUPABASE_URL=https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE
+VITE_CONVEX_URL=https://blessed-anaconda-376.convex.cloud
+```
+
+**Nota**: Las variables deben empezar con `VITE_` para que Vite las exponga al frontend.
+
+### 5. Configurar Dominio Personalizado
 
 En la sección de **Domains**:
 - Agrega: `pulsossociales.com`
 - Configura el DNS de tu dominio para apuntar al servidor de EasyPanel
 
-### 5. Configurar Proxy para Supabase (Importante)
+### 6. Configurar Proxy para Supabase (Importante)
 
 En la sección de **Routes** o **Proxy**, agrega:
 
