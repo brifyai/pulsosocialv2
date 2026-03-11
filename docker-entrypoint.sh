@@ -6,15 +6,6 @@ set -e
 
 echo "Injecting environment variables..."
 
-# Replace placeholders in JS files with actual environment values
-if [ -n "$VITE_SUPABASE_URL" ]; then
-  find /usr/share/nginx/html -type f -name "*.js" -exec sed -i "s|__SUPABASE_URL__|$VITE_SUPABASE_URL|g" {} \;
-fi
-
-if [ -n "$VITE_SUPABASE_ANON_KEY" ]; then
-  find /usr/share/nginx/html -type f -name "*.js" -exec sed -i "s|__SUPABASE_ANON_KEY__|$VITE_SUPABASE_ANON_KEY|g" {} \;
-fi
-
 # Also create a window object with env vars for runtime access
 cat > /usr/share/nginx/html/env.js << EOF
 window.__ENV__ = {
@@ -23,6 +14,14 @@ window.__ENV__ = {
   VITE_CONVEX_URL: "${VITE_CONVEX_URL}"
 };
 EOF
+
+# Process nginx configuration template with envsubst (even if no variables, ensures file is copied)
+if [ -f /etc/nginx/conf.d/default.conf.template ]; then
+  envsubst '${VITE_SUPABASE_URL} ${VITE_SUPABASE_ANON_KEY} ${VITE_CONVEX_URL}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
+  echo "nginx configuration processed"
+else
+  echo "Warning: nginx template not found"
+fi
 
 echo "Environment variables injected successfully"
 echo "Starting nginx..."
