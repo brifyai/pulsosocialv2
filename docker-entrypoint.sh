@@ -21,7 +21,8 @@ echo ""
 # Use default production values if not set
 # This ensures the app works even if EasyPanel doesn't pass all variables
 SUPABASE_URL_TO_USE="${VITE_SUPABASE_URL:-https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host}"
-SUPABASE_KEY_TO_USE="${VITE_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1bHNvc29jaWFsdjItcHVsc29zb2NpYWxidjMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0MTcwMjQ1NCwiZXhwIjoxNzU3MjU4NDU0fQ.Cf6U3eP7G0FKlJXG8KqQvZzJxL6LqKqKqKqKqKqKqKq}"
+# ANON_KEY from Supabase config (eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE)
+SUPABASE_KEY_TO_USE="${VITE_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE}"
 CONVEX_URL_TO_USE="${VITE_CONVEX_URL:-https://blessed-anaconda-376.convex.cloud}"
 
 echo "Using values:"
