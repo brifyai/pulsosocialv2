@@ -83,20 +83,34 @@ export function getEnvConfig(): EnvConfig {
 /**
  * Obtiene la URL de Supabase según el entorno
  * 
- * En producción, usa el proxy nginx (/rest) para evitar CORS
- * En desarrollo, usa la URL directa
+ * En producción (EasyPanel), usa el proxy nginx (/rest) para evitar CORS
+ * En desarrollo (localhost u otra URL), usa la URL directa
+ * 
+ * Detecta producción por:
+ * 1. El hostname no es localhost
+ * 2. La URL contiene 'easypanel.host' o es un dominio personalizado
  */
 export function getSupabaseUrl(): string {
   const config = getEnvConfig();
-  const isProd = import.meta.env.PROD;
+  const supabaseUrl = config.VITE_SUPABASE_URL;
   
-  if (isProd) {
-    // En producción usar proxy nginx para evitar CORS
+  // Verificar si estamos en producción por el hostname actual
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1');
+  
+  // Verificar si la URL de Supabase es externa (no localhost)
+  const isExternalSupabase = supabaseUrl && 
+    !supabaseUrl.includes('localhost') && 
+    !supabaseUrl.includes('127.0.0.1');
+  
+  // En producción (no localhost + Supabase externo), usar proxy nginx
+  if (!isLocalhost && isExternalSupabase) {
     return '/rest';
   }
   
   // En desarrollo, usar URL directa
-  return config.VITE_SUPABASE_URL;
+  return supabaseUrl;
 }
 
 /**
