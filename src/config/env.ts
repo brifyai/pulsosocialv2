@@ -119,12 +119,21 @@ export function getSupabaseUrl(): string {
   const hostname = getHostname();
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
   
+  // DEBUG: Siempre loguear en producción
+  if (typeof console !== 'undefined') {
+    console.log('[getSupabaseUrl] Hostname:', hostname);
+    console.log('[getSupabaseUrl] isLocalhost:', isLocalhost);
+    console.log('[getSupabaseUrl] Returning:', !isLocalhost ? '/rest' : supabaseUrl);
+  }
+  
   // En producción, usar proxy nginx para evitar CORS
   if (!isLocalhost) {
+    console.log('[getSupabaseUrl] ✅ Using /rest proxy');
     return '/rest';
   }
   
   // En desarrollo, usar URL directa
+  console.log('[getSupabaseUrl] ⚠️ Using direct URL:', supabaseUrl);
   return supabaseUrl;
 }
 
