@@ -12,9 +12,17 @@ window.__ENV__ = {
 };
 EOF
 
-# Copy nginx configuration (no envsubst needed as nginx.conf has no variables)
+# Remove any existing nginx config and copy our template
+rm -f /etc/nginx/conf.d/default.conf
 cp /etc/nginx/conf.d/default.conf.template /etc/nginx/conf.d/default.conf
 echo "nginx configuration copied"
+
+# Verify the configuration includes the proxy location
+if grep -q "location ^~ /supabase-proxy/" /etc/nginx/conf.d/default.conf; then
+    echo "✓ Supabase proxy location found in nginx config"
+else
+    echo "✗ WARNING: Supabase proxy location NOT found in nginx config!"
+fi
 
 echo "Environment variables injected successfully"
 echo "Starting nginx..."
