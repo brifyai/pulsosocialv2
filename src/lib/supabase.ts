@@ -12,25 +12,6 @@ declare global {
   }
 }
 
-const getSupabaseUrl = (): string => {
-  // 1. Intentar con variables de Vite (build-time)
-  const viteUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (viteUrl) return viteUrl;
-  
-  // 2. Intentar con REACT_APP_ (compatibilidad)
-  const reactAppUrl = import.meta.env.REACT_APP_SUPABASE_URL;
-  if (reactAppUrl) return reactAppUrl;
-  
-  // 3. Intentar con window.__ENV__ (runtime injection via Docker)
-  const runtimeUrl = window.__ENV__?.VITE_SUPABASE_URL;
-  if (runtimeUrl) return runtimeUrl;
-  
-  throw new Error(
-    'VITE_SUPABASE_URL no está configurada. ' +
-    'Verifica las variables de entorno en Docker/Easypanel.'
-  );
-};
-
 const getSupabaseAnonKey = (): string => {
   // 1. Intentar con variables de Vite (build-time)
   const viteKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -50,11 +31,16 @@ const getSupabaseAnonKey = (): string => {
   );
 };
 
-// Conectar DIRECTAMENTE a Supabase (no usar proxy)
-// El proxy /supabase-proxy/ no funciona porque EasyPanel intercepta las peticiones
-// antes de que lleguen a nuestro nginx interno
+// Usar proxy local para evitar CORS
+// nginx.conf tiene location /rest/ que proxy a Supabase con headers CORS
+const getSupabaseProxyUrl = (): string => {
+  // Usar ruta relativa - el proxy nginx maneja CORS
+  return '/rest';
+};
+
+// Conectar a Supabase a través del proxy nginx para evitar CORS
 export const supabase = createClient(
-  getSupabaseUrl(),    // URL directa: https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host
+  getSupabaseProxyUrl(),  // '/rest' - proxy nginx
   getSupabaseAnonKey(),
   {
     auth: {
@@ -73,5 +59,5 @@ export const supabase = createClient(
 
 // Función helper para obtener URL de Supabase
 export const getSupabaseEndpoint = (): string => {
-  return getSupabaseUrl();
+  return getSupabaseProxyUrl();
 };
