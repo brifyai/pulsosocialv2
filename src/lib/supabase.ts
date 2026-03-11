@@ -50,19 +50,11 @@ const getSupabaseAnonKey = (): string => {
   );
 };
 
-// Usar proxy local para evitar CORS
-// El proxy reenvía las peticiones a Supabase con headers CORS correctos
-const getSupabaseProxyUrl = (): string => {
-  // Usar el proxy NGINX configurado en /supabase-proxy/
-  // Retornar solo la ruta relativa (sin slash al final)
-  // El cliente de Supabase construye la URL completa: /supabase-proxy/rest/v1/...
-  return '/supabase-proxy';
-};
-
-// Crear cliente de Supabase usando el proxy
-// Esto es necesario porque el frontend y Supabase están en dominios diferentes
+// Conectar DIRECTAMENTE a Supabase (no usar proxy)
+// El proxy /supabase-proxy/ no funciona porque EasyPanel intercepta las peticiones
+// antes de que lleguen a nuestro nginx interno
 export const supabase = createClient(
-  getSupabaseProxyUrl(),  // Usar proxy en lugar de URL directa
+  getSupabaseUrl(),    // URL directa: https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host
   getSupabaseAnonKey(),
   {
     auth: {
@@ -76,15 +68,10 @@ export const supabase = createClient(
         eventsPerSecond: 10,
       },
     },
-    global: {
-      headers: {
-        'X-Use-Proxy': 'true',
-      },
-    },
   }
 );
 
-// Función helper para obtener URL de Supabase (directa o por proxy)
+// Función helper para obtener URL de Supabase
 export const getSupabaseEndpoint = (): string => {
-  return getSupabaseProxyUrl();
+  return getSupabaseUrl();
 };
