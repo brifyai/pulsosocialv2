@@ -54,8 +54,9 @@ const getSupabaseAnonKey = (): string => {
 // El proxy reenvía las peticiones a Supabase con headers CORS correctos
 const getSupabaseProxyUrl = (): string => {
   // Usar el proxy NGINX configurado en /supabase-proxy/
-  // Esto evita problemas de CORS porque las peticiones van al mismo origen
-  return `${window.location.origin}/supabase-proxy`;
+  // Retornar solo la ruta relativa (sin slash al final)
+  // El cliente de Supabase construye la URL completa: /supabase-proxy/rest/v1/...
+  return '/supabase-proxy';
 };
 
 // Crear cliente de Supabase usando el proxy
