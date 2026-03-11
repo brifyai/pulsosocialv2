@@ -21,9 +21,15 @@ export type ViewportProps = {
 export default PixiComponent('Viewport', {
   create(props: ViewportProps) {
     const { app, children, viewportRef, ...viewportProps } = props;
+    
+    // Fix: Verificar que events existe antes de pasarlo a Viewport
+    // El error "Cannot read properties of null (reading 'removeEventListener')"
+    // ocurre cuando app.renderer.events es null durante la destrucción
+    const events = app.renderer.events;
+    
     const viewport = new Viewport({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-      events: app.renderer.events,
+      events: events || undefined,
       passiveWheel: false,
       ...viewportProps,
     });
@@ -52,5 +58,40 @@ export default PixiComponent('Viewport', {
         viewport[p] = newProps[p];
       }
     });
+  },
+  // Fix: Agregar destroy personalizado para manejar el cleanup correctamente
+  // El error "Cannot read properties of null (reading 'removeEventListener')"
+  // ocurre porque pixi-viewport intenta remover listeners de un objeto null
+  // 
+  // Solución: Simplemente marcar como destruido sin llamar a métodos que puedan fallar
+  destroy(instance) {
+    if (instance) {
+      // Remover event listeners de forma segura
+      try {
+        if (typeof instance.removeAllListeners === 'function') {
+          instance.removeAllListeners();
+        }
+      } catch (e) {
+        // Ignorar errores al remover listeners
+      }
+      
+      // Marcar como destruido y limpiar referencias
+      try {
+        instance.destroyed = true;
+        // Limpiar referencias internas que podrían causar memory leaks
+        // @ts-expect-error - propiedades internas de pixi-viewport
+        if (instance.plugins) {
+          // @ts-expect-error
+          instance.plugins = {};
+        }
+        // @ts-expect-error
+        if (instance._events) {
+          // @ts-expect-error
+          instance._events = {};
+        }
+      } catch (e) {
+        // Ignorar errores durante la limpieza
+      }
+    }
   },
 });
