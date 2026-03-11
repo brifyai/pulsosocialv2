@@ -9,7 +9,7 @@ declare global {
       VITE_SUPABASE_ANON_KEY?: string;
       VITE_CONVEX_URL?: string;
     };
-  };
+  }
 }
 
 const getSupabaseUrl = (): string => {
