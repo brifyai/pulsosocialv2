@@ -3,6 +3,7 @@ import { ConvexProvider, ConvexReactClient } from 'convex/react';
 import { SurveyDashboard } from './components/dashboard/SurveyDashboard';
 import { AgentList } from './components/dashboard/AgentList';
 import { EventViewer } from './components/dashboard/EventViewer';
+import Game from './components/Game';
 
 // ============================================================================
 // CONFIGURACIÓN
@@ -11,7 +12,7 @@ import { EventViewer } from './components/dashboard/EventViewer';
 const convexUrl = import.meta.env.VITE_CONVEX_URL || 'https://blessed-anaconda-376.convex.cloud';
 const convex = new ConvexReactClient(convexUrl);
 
-type TabType = 'dashboard' | 'agents' | 'events';
+type TabType = 'dashboard' | 'agents' | 'events' | 'mapa';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -49,6 +50,11 @@ export default function App() {
                   active={activeTab === 'events'}
                   onClick={() => setActiveTab('events')}
                 />
+                <TabButton
+                  label="🗺️ Mapa"
+                  active={activeTab === 'mapa'}
+                  onClick={() => setActiveTab('mapa')}
+                />
               </nav>
             </div>
           </div>
@@ -59,6 +65,7 @@ export default function App() {
           {activeTab === 'dashboard' && <SurveyDashboard />}
           {activeTab === 'agents' && <AgentList />}
           {activeTab === 'events' && <EventViewer />}
+          {activeTab === 'mapa' && <Game />}
         </main>
 
         {/* Footer */}
