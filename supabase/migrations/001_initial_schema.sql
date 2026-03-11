@@ -223,6 +223,27 @@ CREATE INDEX IF NOT EXISTS idx_questions_survey ON survey_questions(survey_id);
 CREATE INDEX IF NOT EXISTS idx_questions_code ON survey_questions(question_code);
 
 -- ============================================================================
+-- TABLA: benchmarks (DEBE IR ANTES DE survey_runs)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS benchmarks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    source_name VARCHAR(100) NOT NULL,
+    source_wave VARCHAR(50),
+    field_date DATE,
+    
+    methodology_json JSONB,
+    results_json JSONB NOT NULL,
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    imported_by VARCHAR(100)
+);
+
+CREATE INDEX IF NOT EXISTS idx_benchmarks_source ON benchmarks(source_name);
+CREATE INDEX IF NOT EXISTS idx_benchmarks_date ON benchmarks(field_date);
+
+-- ============================================================================
 -- TABLA: survey_runs
 -- ============================================================================
 
@@ -273,27 +294,6 @@ CREATE INDEX IF NOT EXISTS idx_responses_run ON survey_responses(run_id);
 CREATE INDEX IF NOT EXISTS idx_responses_agent ON survey_responses(agent_id);
 CREATE INDEX IF NOT EXISTS idx_responses_question ON survey_responses(question_code);
 CREATE INDEX IF NOT EXISTS idx_responses_run_question ON survey_responses(run_id, question_code);
-
--- ============================================================================
--- TABLA: benchmarks
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS benchmarks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    
-    source_name VARCHAR(100) NOT NULL,
-    source_wave VARCHAR(50),
-    field_date DATE,
-    
-    methodology_json JSONB,
-    results_json JSONB NOT NULL,
-    
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    imported_by VARCHAR(100)
-);
-
-CREATE INDEX IF NOT EXISTS idx_benchmarks_source ON benchmarks(source_name);
-CREATE INDEX IF NOT EXISTS idx_benchmarks_date ON benchmarks(field_date);
 
 -- ============================================================================
 -- TABLA: calibration_runs
