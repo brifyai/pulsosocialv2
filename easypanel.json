@@ -23,5 +23,8 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
+  ],
+  "domains": [
+    "pulsossociales.com"
   ]
 }

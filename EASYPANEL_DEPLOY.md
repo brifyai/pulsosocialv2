@@ -2,6 +2,8 @@
 
 Este proyecto ahora usa **React puro con Vite** para el build estático, sin necesidad de Docker.
 
+**Dominio**: `pulsossociales.com`
+
 ## 🚀 Configuración en EasyPanel
 
 ### 1. Crear Nuevo Servicio
@@ -21,13 +23,11 @@ Este proyecto ahora usa **React puro con Vite** para el build estático, sin nec
 - **Output Directory**: `dist`
 - **Install Command**: `npm install`
 
-### 4. Variables de Entorno (Opcional)
+### 4. Configurar Dominio Personalizado
 
-No son necesarias porque la configuración está hardcodeada en `src/config/env.ts`, pero puedes agregarlas si quieres:
-
-```
-NODE_ENV=production
-```
+En la sección de **Domains**:
+- Agrega: `pulsossociales.com`
+- Configura el DNS de tu dominio para apuntar al servidor de EasyPanel
 
 ### 5. Configurar Proxy para Supabase (Importante)
 
@@ -48,9 +48,9 @@ Esto evita el error de CORS al hacer que las peticiones a `/rest` sean proxyeada
 
 | Archivo | Descripción |
 |---------|-------------|
-| `easypanel.json` | Configuración de EasyPanel (build, routes, proxy) |
+| `easypanel.json` | Configuración de EasyPanel (build, routes, proxy, dominio) |
 | `vite.config.ts` | Configuración de Vite con proxy para desarrollo |
-| `src/config/env.ts` | Configuración de URLs por entorno (localhost/producción) |
+| `src/config/env.ts` | Configuración de URLs por entorno (localhost/pulsossociales.com) |
 | `package.json` | Scripts de build: `easypanel:build` y `easypanel:start` |
 
 ## 🔧 Scripts Disponibles
@@ -75,6 +75,7 @@ npm run easypanel:build
 2. **Proxy integrado**: Las peticiones a `/rest` van al backend automáticamente
 3. **Detección automática**: El código detecta si está en localhost o producción
 4. **CORS resuelto**: El proxy maneja los headers de CORS
+5. **Dominio propio**: Funciona con `pulsossociales.com`
 
 ## 🐛 Debug
 
@@ -84,13 +85,14 @@ Si hay problemas, verifica en la consola del navegador:
 // Debería mostrar la URL correcta según el entorno
 window.getSupabaseUrl()
 
-// En producción debería retornar: "/rest"
+// En pulsossociales.com debería retornar: "/rest"
 // En localhost debería retornar: "http://localhost:8000"
 ```
 
 ## 📝 Notas
 
-- El archivo `easypanel.json` contiene la configuración completa
+- El archivo `easypanel.json` contiene la configuración completa incluyendo el dominio
 - No necesitas Dockerfile ni docker-compose.yml
 - El build genera archivos estáticos en la carpeta `dist/`
 - EasyPanel sirve directamente desde `dist/`
+- El dominio `pulsossociales.com` debe estar configurado en el DNS
