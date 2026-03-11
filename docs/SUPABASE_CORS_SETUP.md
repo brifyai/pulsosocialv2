@@ -1,4 +1,4 @@
-# Configuración de CORS para Supabase
+# Configuración de CORS para Supabase - Actualizado
 
 ## Problema
 
@@ -14,74 +14,73 @@ https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host
 
 Esto causa errores de CORS porque los dominios son diferentes.
 
-## Solución
+## Solución para Easypanel/Supabase Self-hosted
 
-### Opción 1: Configurar CORS en Supabase (Recomendado)
+Dado que estás usando Supabase self-hosted en Easypanel, la configuración de CORS se hace de forma diferente.
 
-1. **Conéctate a tu base de datos Supabase** usando psql o pgAdmin
+### Opción 1: Configurar Kong API Gateway (Recomendado)
 
-2. **Ejecuta el siguiente SQL** para configurar CORS:
+Supabase usa Kong como API gateway. Debes configurar los headers CORS en Kong:
+
+1. **En la dashboard de Easypanel**, busca tu servicio de Supabase
+2. **Encuentra la configuración de Kong** (el API gateway)
+3. **Agrega un plugin de CORS** o modifica la configuración existente
+
+### Opción 2: Configurar vía Variables de Entorno en Supabase
+
+En tu deployment de Supabase en Easypanel:
+
+1. **Ve a tu proyecto en Easypanel**
+2. **Busca las variables de entorno** del servicio de Supabase (Kong/API)
+3. **Agrega o modifica** estas variables:
+
+```bash
+# Headers CORS para Kong
+KONG_HTTP_HEADERS=Access-Control-Allow-Origin:https://pulsosocialv2-pulsosocialv2.dsb9vm.easypanel.host,Access-Control-Allow-Methods:GET,HEAD,POST,PUT,DELETE,OPTIONS,Access-Control-Allow-Headers:Origin,Authorization,Content-Type
+```
+
+### Opción 3: Configurar vía SQL en la base de datos
+
+Conéctate a tu base de datos Supabase y ejecuta:
 
 ```sql
--- Habilitar la extensión pg_cors si no está habilitada
--- (Solo disponible en Supabase Cloud o instalaciones con privilegios de superusuario)
+-- Configurar CORS para el API REST
+-- Esto configura PostgREST para aceptar CORS
 
--- Alternativa: Configurar headers CORS en la API REST
--- Ve a la dashboard de Supabase -> Project Settings -> API
--- Agrega el dominio del frontend a "Allowed Origins (CORS)"
+-- Primero, verifica si existe la configuración
+SHOW server_config;
+
+-- Configurar headers CORS (puede requerir reinicio del servicio)
+ALTER SYSTEM SET "app.settings.cors_origins" TO 'https://pulsosocialv2-pulsosocialv2.dsb9vm.easypanel.host';
 ```
 
-3. **En la Dashboard de Supabase:**
-   - Ve a **Project Settings** (engranaje en la barra lateral)
-   - Selecciona **API**
-   - En **Allowed Origins (CORS)**, agrega:
-     ```
-     https://pulsosocialv2-pulsosocialv2.dsb9vm.easypanel.host
-     ```
-   - Si quieres permitir todos los orígenes (no recomendado para producción):
-     ```
-     *
-     ```
-   - Haz clic en **Save**
+### Opción 4: Usar un Proxy NGINX (Solución Alternativa)
 
-### Opción 2: Usar un Proxy
+Si no puedes modificar la configuración de Supabase, puedes configurar un proxy inverso en el mismo dominio:
 
-Si no puedes modificar la configuración de Supabase, puedes usar un proxy:
+1. **En Easypanel**, agrega un servicio NGINX proxy
+2. **Configura el proxy** para redirigir `/api/supabase/*` a Supabase
+3. **Agrega headers CORS** en NGINX:
 
-```typescript
-// src/lib/supabase.ts
-export const supabase = createClient(
-  getSupabaseUrl(),
-  getSupabaseAnonKey(),
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-    },
-    // Usar proxy para evitar CORS
-    headers: {
-      'X-Proxy-Url': '/api/supabase-proxy',
-    },
-  }
-);
-```
-
-### Opción 3: Mismo Dominio
-
-La solución más limpia es tener el frontend y Supabase en el mismo dominio:
-
-```
-Frontend: https://app.tudominio.com
-Supabase: https://db.tudominio.com
-```
-
-O usar un subdominio único:
-
-```
-Frontend: https://tudominio.com
-Supabase: https://api.tudominio.com
+```nginx
+location /api/supabase/ {
+    proxy_pass https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host/;
+    
+    # CORS headers
+    add_header Access-Control-Allow-Origin "https://pulsosocialv2-pulsosocialv2.dsb9vm.easypanel.host" always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+    
+    # Handle preflight requests
+    if ($request_method = OPTIONS) {
+        add_header Access-Control-Allow-Origin "https://pulsosocialv2-pulsosocialv2.dsb9vm.easypanel.host" always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+        add_header Content-Length 0;
+        add_header Content-Type text/plain;
+        return 204;
+    }
+}
 ```
 
 ## Verificación
@@ -107,4 +106,6 @@ Después de configurar CORS, verifica que funcione:
 ## Enlaces Útiles
 
 - [Supabase CORS Documentation](https://supabase.com/docs/guides/api#cors)
+- [Kong CORS Plugin](https://docs.konghq.com/hub/kong-inc/cors/)
 - [MDN CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
+- [Supabase GitHub - CORS Issues](https://github.com/supabase/supabase/issues?q=cors)
