@@ -1,15 +1,18 @@
 /**
  * Configuración de entornos para PulsoSocial
  * 
- * Permite usar diferentes URLs según el entorno:
- * - development: localhost
- * - production: EasyPanel
- * - staging: (opcional)
+ * SOLUCIÓN DEFINITIVA: Detección automática por hostname
  * 
- * Las variables se pueden definir en:
- * 1. .env.local (desarrollo, no se commitea)
- * 2. .env (valores por defecto)
- * 3. window.__ENV__ (inyección en runtime via Docker)
+ * Esta configuración:
+ * 1. Detecta automáticamente el entorno por el hostname del navegador
+ * 2. Usa configuraciones predefinidas por dominio
+ * 3. NO requiere variables de entorno externas
+ * 4. Funciona inmediatamente después del deploy
+ * 
+ * Entornos soportados:
+ * - localhost: Desarrollo local
+ * - *.easypanel.host: Producción en EasyPanel
+ * - Otros: Configuración personalizada
  */
 
 export interface EnvConfig {
@@ -19,79 +22,86 @@ export interface EnvConfig {
   NODE_ENV: 'development' | 'production' | 'test';
 }
 
-// Valores por defecto
-const defaultConfig: EnvConfig = {
-  VITE_SUPABASE_URL: 'http://localhost:8000',
-  VITE_SUPABASE_ANON_KEY: '',
-  VITE_CONVEX_URL: 'http://localhost:3000',
-  NODE_ENV: 'development',
-};
-
-// Configurations predefinidas por entorno
-const envPresets: Record<string, Partial<EnvConfig>> = {
+/**
+ * Configuraciones predefinidas por patrón de hostname
+ */
+const ENV_PRESETS: Record<string, Omit<EnvConfig, 'NODE_ENV'>> = {
   // Desarrollo local
-  development: {
+  localhost: {
     VITE_SUPABASE_URL: 'http://localhost:8000',
+    VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDE3NjkyMDAsImV4cCI6MTc5OTUzNTYwMH0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE',
     VITE_CONVEX_URL: 'http://localhost:3000',
   },
   
-  // Producción en EasyPanel
-  production: {
+  // Producción en EasyPanel - Pulsosocial V2
+  'easypanel.host': {
     VITE_SUPABASE_URL: 'https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host',
+    VITE_SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UtZGVtbyIsCiAgICAiaWF0IjogMTY0MTc2OTIwMCwKICAgICJleHAiOiAxNzk5NTM1NjAwCn0.dc_X5iR_VP_qT0zsiyj_I_OZ2T9FtRU2BBNWN8Bu4GE',
     VITE_CONVEX_URL: 'https://blessed-anaconda-376.convex.cloud',
-  },
-  
-  // Staging (opcional)
-  staging: {
-    VITE_SUPABASE_URL: 'https://staging-supabase.tudominio.com',
-    VITE_CONVEX_URL: 'https://staging-convex.tudominio.com',
   },
 };
 
 /**
- * Obtiene la configuración del entorno actual
- * 
- * Prioridad:
- * 1. window.__ENV__ (runtime injection) - SI existe, es producción
- * 2. Variables de Vite (import.meta.env) - build time
- * 3. Variables de React (import.meta.env.REACT_APP_*)
- * 4. Valores por defecto
- * 
- * NOTA: En producción con Docker, window.__ENV__ es inyectado por
- * docker-entrypoint.sh y tiene prioridad sobre las variables de build.
+ * Obtiene el hostname actual del navegador
  */
-export function getEnvConfig(): EnvConfig {
-  // Primero verificar window.__ENV__ (runtime injection de Docker)
-  const runtimeEnv = (window as any).__ENV__ as Partial<EnvConfig> | undefined;
+function getHostname(): string {
+  if (typeof window === 'undefined') {
+    return 'localhost';
+  }
+  return window.location.hostname.toLowerCase();
+}
+
+/**
+ * Detecta el entorno actual basándose en el hostname
+ * 
+ * Prioridad de detección:
+ * 1. Coincidencia exacta con claves de ENV_PRESETS
+ * 2. Coincidencia por subdominio (terminación del hostname)
+ * 3. Fallback a localhost (desarrollo)
+ */
+function detectEnv(): string {
+  const hostname = getHostname();
   
-  // Si existe window.__ENV__, estamos en producción Docker
-  if (runtimeEnv && runtimeEnv.VITE_SUPABASE_URL) {
-    console.log('[EnvConfig] Usando configuración runtime (Docker):', runtimeEnv);
-    return {
-      VITE_SUPABASE_URL: runtimeEnv.VITE_SUPABASE_URL,
-      VITE_SUPABASE_ANON_KEY: runtimeEnv.VITE_SUPABASE_ANON_KEY || '',
-      VITE_CONVEX_URL: runtimeEnv.VITE_CONVEX_URL || '',
-      NODE_ENV: 'production',
-    };
+  // Coincidencia exacta
+  if (hostname in ENV_PRESETS) {
+    return hostname;
   }
   
-  // Intentar obtener de Vite (build time)
-  const viteSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const viteSupabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  const viteConvexUrl = import.meta.env.VITE_CONVEX_URL;
+  // Coincidencia por terminación (para subdominios)
+  for (const [key] of Object.entries(ENV_PRESETS)) {
+    if (hostname.endsWith('.' + key) || hostname.endsWith(key)) {
+      return key;
+    }
+  }
   
-  // Fallback a REACT_APP_*
-  const reactSupabaseUrl = import.meta.env.REACT_APP_SUPABASE_URL;
-  const reactSupabaseKey = import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
+  // Fallback a localhost
+  return 'localhost';
+}
+
+/**
+ * Obtiene la configuración del entorno actual
+ * 
+ * Esta función:
+ * 1. Detecta automáticamente el entorno por hostname
+ * 2. Retorna la configuración predefinida para ese entorno
+ * 3. NO depende de variables de entorno externas
+ */
+export function getEnvConfig(): EnvConfig {
+  const envKey = detectEnv();
+  const preset = ENV_PRESETS[envKey] || ENV_PRESETS.localhost;
+  const isProduction = envKey !== 'localhost';
   
   const config: EnvConfig = {
-    VITE_SUPABASE_URL: viteSupabaseUrl || reactSupabaseUrl || defaultConfig.VITE_SUPABASE_URL,
-    VITE_SUPABASE_ANON_KEY: viteSupabaseKey || reactSupabaseKey || defaultConfig.VITE_SUPABASE_ANON_KEY,
-    VITE_CONVEX_URL: viteConvexUrl || defaultConfig.VITE_CONVEX_URL,
-    NODE_ENV: (import.meta.env.MODE as EnvConfig['NODE_ENV']) || 'development',
+    ...preset,
+    NODE_ENV: isProduction ? 'production' : 'development',
   };
   
-  console.log('[EnvConfig] Usando configuración build-time:', config);
+  // Debug en consola (solo en desarrollo)
+  if (!isProduction && typeof console !== 'undefined') {
+    console.log('[EnvConfig] Entorno detectado:', envKey);
+    console.log('[EnvConfig] Configuración:', { ...config, VITE_SUPABASE_ANON_KEY: '***' });
+  }
+  
   return config;
 }
 
@@ -99,28 +109,18 @@ export function getEnvConfig(): EnvConfig {
  * Obtiene la URL de Supabase según el entorno
  * 
  * En producción (EasyPanel), usa el proxy nginx (/rest) para evitar CORS
- * En desarrollo (localhost u otra URL), usa la URL directa
- * 
- * Detecta producción por:
- * 1. El hostname no es localhost
- * 2. La URL contiene 'easypanel.host' o es un dominio personalizado
+ * En desarrollo (localhost), usa la URL directa
  */
 export function getSupabaseUrl(): string {
   const config = getEnvConfig();
   const supabaseUrl = config.VITE_SUPABASE_URL;
   
   // Verificar si estamos en producción por el hostname actual
-  const isLocalhost = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || 
-     window.location.hostname === '127.0.0.1');
+  const hostname = getHostname();
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
   
-  // Verificar si la URL de Supabase es externa (no localhost)
-  const isExternalSupabase = supabaseUrl && 
-    !supabaseUrl.includes('localhost') && 
-    !supabaseUrl.includes('127.0.0.1');
-  
-  // En producción (no localhost + Supabase externo), usar proxy nginx
-  if (!isLocalhost && isExternalSupabase) {
+  // En producción, usar proxy nginx para evitar CORS
+  if (!isLocalhost) {
     return '/rest';
   }
   
@@ -163,12 +163,21 @@ export function validateEnvConfig(): void {
   if (errors.length > 0) {
     console.error('[EnvConfig] Errores de configuración:');
     errors.forEach(err => console.error(`  - ${err}`));
-    console.warn('[EnvConfig] Usando valores por defecto. Verifica tu .env o window.__ENV__');
   }
 }
 
-// Exportar configuración actual para debug
+/**
+ * Obtiene el entorno actual (para debug)
+ */
+export function getCurrentEnv(): string {
+  return detectEnv();
+}
+
+// Exportar funciones para debug en ventana global
 if (typeof window !== 'undefined') {
   (window as any).getEnvConfig = getEnvConfig;
-  console.log('[EnvConfig] Configuración cargada:', getEnvConfig());
+  (window as any).getSupabaseUrl = getSupabaseUrl;
+  (window as any).getSupabaseAnonKey = getSupabaseAnonKey;
+  (window as any).getConvexUrl = getConvexUrl;
+  (window as any).getCurrentEnv = getCurrentEnv;
 }
