@@ -11,6 +11,8 @@ import { useHistoricalTime } from '../hooks/useHistoricalTime.ts';
 import { DebugTimeManager } from './DebugTimeManager.tsx';
 import { GameId } from '../../convex/aiTown/ids.ts';
 import { useServerGame } from '../hooks/serverGame.ts';
+import MusicButton from './buttons/MusicButton.tsx';
+import InteractButton from './buttons/InteractButton.tsx';
 
 export const SHOW_DEBUG_UI = !!import.meta.env.VITE_SHOW_DEBUG_UI;
 
@@ -45,6 +47,11 @@ export default function Game() {
       <div className="mx-auto w-full max-w grid grid-rows-[240px_1fr] lg:grid-rows-[1fr] lg:grid-cols-[1fr_auto] lg:grow max-w-[1400px] min-h-[480px] game-frame">
         {/* Game area */}
         <div className="relative overflow-hidden bg-brown-900" ref={gameWrapperRef}>
+          {/* Botones de control del mapa */}
+          <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+            <MusicButton />
+            <InteractButton />
+          </div>
           <div className="absolute inset-0">
             <div className="container">
               <Stage width={width} height={height} options={{ backgroundColor: 0x7ab5ff }}>
