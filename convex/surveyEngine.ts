@@ -13,8 +13,7 @@
  */
 
 import { v } from 'convex/values';
-import { query, mutation, action } from './_generated/server';
-import { internal } from './_generated/api';
+import { query, mutation, action, ActionCtx } from './_generated/server';
 import { httpAction } from './_generated/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -440,89 +439,84 @@ export const getCademCalibrationQuestions = query({
 });
 
 /**
- * Obtiene datos completos de un agente desde Supabase
+ * Obtiene datos completos de un agente desde Supabase (función interna)
  */
-export const getAgentData = action({
-  args: { agentId: v.string() },
-  handler: async (ctx, args) => {
-    const supabase = createSupabaseClient();
-    
-    // 1. Obtener datos demográficos
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('id', args.agentId)
-      .single();
-    
-    if (agentError || !agent) {
-      throw new Error(`Agente no encontrado: ${args.agentId}`);
-    }
-    
-    // 2. Obtener rasgos
-    const { data: traits } = await supabase
-      .from('agent_traits')
-      .select('*')
-      .eq('agent_id', args.agentId)
-      .single();
-    
-    // 3. Obtener memoria
-    const { data: memory } = await supabase
-      .from('agent_memory')
-      .select('*')
-      .eq('agent_id', args.agentId)
-      .single();
-    
-    // 4. Obtener estado
-    const { data: state } = await supabase
-      .from('agent_state')
-      .select('*')
-      .eq('agent_id', args.agentId)
-      .single();
-    
-    return {
-      agent,
-      traits: traits || {},
-      memory: memory || {},
-      state: state || {},
-    };
-  },
-});
+async function getAgentDataInternal(ctx: ActionCtx, agentId: string) {
+  const supabase = createSupabaseClient();
+  
+  // 1. Obtener datos demográficos
+  const { data: agent, error: agentError } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('id', agentId)
+    .single();
+  
+  if (agentError || !agent) {
+    throw new Error(`Agente no encontrado: ${agentId}`);
+  }
+  
+  // 2. Obtener rasgos
+  const { data: traits } = await supabase
+    .from('agent_traits')
+    .select('*')
+    .eq('agent_id', agentId)
+    .single();
+  
+  // 3. Obtener memoria
+  const { data: memory } = await supabase
+    .from('agent_memory')
+    .select('*')
+    .eq('agent_id', agentId)
+    .single();
+  
+  // 4. Obtener estado
+  const { data: state } = await supabase
+    .from('agent_state')
+    .select('*')
+    .eq('agent_id', agentId)
+    .single();
+  
+  return {
+    agent,
+    traits: traits || {},
+    memory: memory || {},
+    state: state || {},
+  };
+}
 
 /**
- * Registra respuesta de encuesta en Supabase
+ * Registra respuesta de encuesta en Supabase (función interna)
  */
-export const registerResponse = action({
-  args: {
-    runId: v.string(),
-    agentId: v.string(),
-    questionCode: v.string(),
-    answerRaw: v.string(),
-    answerStructured: v.any(),
-    confidence: v.number(),
-    responseTimeMs: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const supabase = createSupabaseClient();
-    
-    const { error } = await supabase
-      .from('survey_responses')
-      .insert({
-        run_id: args.runId,
-        agent_id: args.agentId,
-        question_code: args.questionCode,
-        answer_raw: args.answerRaw,
-        answer_structured_json: args.answerStructured,
-        confidence: args.confidence,
-        response_time_ms: args.responseTimeMs,
-      });
-    
-    if (error) {
-      throw new Error(`Error al registrar respuesta: ${error.message}`);
-    }
-    
-    return { success: true };
-  },
-});
+async function registerResponseInternal(
+  ctx: ActionCtx,
+  runId: string,
+  agentId: string,
+  questionCode: string,
+  answerRaw: string,
+  answerStructured: any,
+  confidence: number,
+  responseTimeMs: number,
+) {
+  const supabase = createSupabaseClient();
+  
+  const { error } = await supabase
+    .from('survey_responses')
+    .insert({
+      run_id: runId,
+      agent_id: agentId,
+      question_code: questionCode,
+      answer_raw: answerRaw,
+      answer_structured_json: answerStructured,
+      confidence: confidence,
+      response_time_ms: responseTimeMs,
+    });
+  
+  if (error) {
+    throw new Error(`Error al registrar respuesta: ${error.message}`);
+  }
+  
+  return { success: true };
+}
 
 interface SurveyResult {
   questionCode: string;
@@ -550,10 +544,8 @@ export const executeAgentSurvey = action({
   handler: async (ctx, args) => {
     const results: SurveyResult[] = [];
     
-    // 1. Obtener datos del agente (usamos _current_ module)
-    const agentData = await ctx.runAction(internal.getAgentData, {
-      agentId: args.agentId,
-    });
+    // 1. Obtener datos del agente
+    const agentData = await getAgentDataInternal(ctx, args.agentId);
     
     const agentContext: AgentContext = {
       id: agentData.agent.id,
@@ -591,15 +583,16 @@ export const executeAgentSurvey = action({
       });
       
       // 3. Registrar respuesta
-      await ctx.runAction(internal.registerResponse, {
-        runId: args.runId,
-        agentId: args.agentId,
-        questionCode: question.code,
-        answerRaw: response.selected_option,
-        answerStructured: response,
-        confidence: response.confidence,
-        responseTimeMs: Math.floor(Math.random() * 5000) + 1000,
-      });
+      await registerResponseInternal(
+        ctx,
+        args.runId,
+        args.agentId,
+        question.code,
+        response.selected_option,
+        response,
+        response.confidence,
+        Math.floor(Math.random() * 5000) + 1000,
+      );
       
       results.push({
         questionCode: question.code,
@@ -614,6 +607,76 @@ export const executeAgentSurvey = action({
 interface SurveyRunResult {
   agentId: string;
   results: SurveyResult[];
+}
+
+/**
+ * Ejecuta encuesta completa a un agente (wrapper para executeAgentSurvey)
+ */
+async function executeAgentSurveyInternal(
+  ctx: ActionCtx,
+  runId: string,
+  agentId: string,
+  questions: Array<{ code: string; type: string; topic: string }>,
+) {
+  const results: SurveyResult[] = [];
+  
+  // 1. Obtener datos del agente
+  const agentData = await getAgentDataInternal(ctx, agentId);
+  
+  const agentContext: AgentContext = {
+    id: agentData.agent.id,
+    demographics: {
+      region: agentData.agent.region,
+      age: agentData.agent.age,
+      education: agentData.agent.education,
+      income_decile: agentData.agent.income_decile,
+    },
+    traits: {
+      ideology_score: agentData.traits.ideology_score || 0.5,
+      institutional_trust: agentData.traits.institutional_trust || 0.5,
+      risk_aversion: agentData.traits.risk_aversion || 0.5,
+      civic_interest: agentData.traits.civic_interest || 0.5,
+      social_desirability: agentData.traits.social_desirability || 0.5,
+      economic_stress: agentData.state.economic_stress || 0.5,
+    },
+    memory: {
+      previous_positions: agentData.memory.previous_positions || {},
+      salient_topics: agentData.memory.salient_topics || [],
+    },
+    exposedEvents: [],
+  };
+  
+  // 2. Procesar cada pregunta
+  for (const question of questions) {
+    const response = computeStructuredResponse({
+      agentContext,
+      questionContext: {
+        code: question.code,
+        type: question.type as any,
+        topic: question.topic,
+      },
+      config: DEFAULT_CONFIG,
+    });
+    
+    // 3. Registrar respuesta
+    await registerResponseInternal(
+      ctx,
+      runId,
+      agentId,
+      question.code,
+      response.selected_option,
+      response,
+      response.confidence,
+      Math.floor(Math.random() * 5000) + 1000,
+    );
+    
+    results.push({
+      questionCode: question.code,
+      response,
+    });
+  }
+  
+  return results;
 }
 
 /**
@@ -635,11 +698,12 @@ export const executeSurveyRun = action({
     
     for (const agentId of args.agentIds) {
       try {
-        const results = await ctx.runAction(internal.executeAgentSurvey, {
-          runId: args.runId,
+        const results = await executeAgentSurveyInternal(
+          ctx,
+          args.runId,
           agentId,
-          questions: args.questions,
-        });
+          args.questions,
+        );
         allResults.push({ agentId, results });
       } catch (error) {
         console.error(`Error procesando agente ${agentId}:`, error);

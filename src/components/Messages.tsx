@@ -69,10 +69,11 @@ export function Messages({
     return null;
   }
   const messageNodes: { time: number; node: React.ReactNode }[] = messages.map((m: Doc<'messages'>) => {
+    const authorName = descriptions?.playerDescriptions.find((p: { playerId: string; name: string }) => p.playerId === m.author)?.name ?? 'Unknown';
     const node = (
       <div key={`text-${m._id}`} className="leading-tight mb-6">
         <div className="flex gap-4">
-          <span className="uppercase flex-grow">{m.authorName}</span>
+          <span className="uppercase flex-grow">{authorName}</span>
           <time dateTime={m._creationTime.toString()}>
             {new Date(m._creationTime).toLocaleString()}
           </time>

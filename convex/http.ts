@@ -7,4 +7,5 @@ http.route({
   method: 'POST',
   handler: handleReplicateWebhook,
 });
+
 export default http;
