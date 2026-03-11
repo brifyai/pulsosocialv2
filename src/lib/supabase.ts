@@ -1,27 +1,53 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Obtener variables de entorno de Vite
-// Vite reemplaza estas variables en tiempo de build
-const getSupabaseUrl = (): string => {
-  const url = import.meta.env.VITE_SUPABASE_URL || import.meta.env.REACT_APP_SUPABASE_URL;
-  if (!url) {
-    throw new Error(
-      'VITE_SUPABASE_URL o REACT_APP_SUPABASE_URL no está configurada. ' +
-      'Asegúrate de pasar las variables de entorno correctamente en el build de Docker.'
-    );
+// Obtener variables de entorno de Vite (build-time) o del objeto window (runtime)
+// Esto permite inyección de variables en runtime via Docker
+declare global {
+  interface Window {
+    __ENV__?: {
+      VITE_SUPABASE_URL?: string;
+      VITE_SUPABASE_ANON_KEY?: string;
+      VITE_CONVEX_URL?: string;
+    };
   }
-  return url;
+}
+
+const getSupabaseUrl = (): string => {
+  // 1. Intentar con variables de Vite (build-time)
+  const viteUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (viteUrl) return viteUrl;
+  
+  // 2. Intentar con REACT_APP_ (compatibilidad)
+  const reactAppUrl = import.meta.env.REACT_APP_SUPABASE_URL;
+  if (reactAppUrl) return reactAppUrl;
+  
+  // 3. Intentar con window.__ENV__ (runtime injection via Docker)
+  const runtimeUrl = window.__ENV__?.VITE_SUPABASE_URL;
+  if (runtimeUrl) return runtimeUrl;
+  
+  throw new Error(
+    'VITE_SUPABASE_URL no está configurada. ' +
+    'Verifica las variables de entorno en Docker/Easypanel.'
+  );
 };
 
 const getSupabaseAnonKey = (): string => {
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
-  if (!key) {
-    throw new Error(
-      'VITE_SUPABASE_ANON_KEY o REACT_APP_SUPABASE_ANON_KEY no está configurada. ' +
-      'Asegúrate de pasar las variables de entorno correctamente en el build de Docker.'
-    );
-  }
-  return key;
+  // 1. Intentar con variables de Vite (build-time)
+  const viteKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (viteKey) return viteKey;
+  
+  // 2. Intentar con REACT_APP_ (compatibilidad)
+  const reactAppKey = import.meta.env.REACT_APP_SUPABASE_ANON_KEY;
+  if (reactAppKey) return reactAppKey;
+  
+  // 3. Intentar con window.__ENV__ (runtime injection via Docker)
+  const runtimeKey = window.__ENV__?.VITE_SUPABASE_ANON_KEY;
+  if (runtimeKey) return runtimeKey;
+  
+  throw new Error(
+    'VITE_SUPABASE_ANON_KEY no está configurada. ' +
+    'Verifica las variables de entorno en Docker/Easypanel.'
+  );
 };
 
 export const supabase = createClient(
