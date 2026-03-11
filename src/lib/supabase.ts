@@ -50,6 +50,19 @@ const getSupabaseAnonKey = (): string => {
   );
 };
 
+// URL base del frontend actual (mismo origen)
+const getFrontendUrl = (): string => {
+  return window.location.origin;
+};
+
+// Usar proxy local para evitar CORS
+// El proxy reenvía las peticiones a Supabase con headers CORS correctos
+const getSupabaseProxyUrl = (): string => {
+  // Usar el proxy NGINX configurado en /supabase-proxy/
+  // Esto evita problemas de CORS porque las peticiones van al mismo origen
+  return `${getFrontendUrl()}/supabase-proxy`;
+};
+
 export const supabase = createClient(
   getSupabaseUrl(),
   getSupabaseAnonKey(),
@@ -65,5 +78,21 @@ export const supabase = createClient(
         eventsPerSecond: 10,
       },
     },
+    // Usar proxy para evitar CORS
+    // Las peticiones van a /supabase-proxy/ en lugar de directamente a Supabase
+    global: {
+      headers: {
+        'X-Use-Proxy': 'true',
+      },
+    },
   }
 );
+
+// Función helper para obtener URL de Supabase (directa o por proxy)
+export const getSupabaseEndpoint = (): string => {
+  // En producción, usar proxy para evitar CORS
+  if (import.meta.env.PROD) {
+    return getSupabaseProxyUrl();
+  }
+  return getSupabaseUrl();
+};
