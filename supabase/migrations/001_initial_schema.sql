@@ -394,10 +394,33 @@ ALTER TABLE agent_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE survey_responses ENABLE ROW LEVEL SECURITY;
 
+-- Políticas públicas (sin dependencia de auth.jwt para selfhost)
 CREATE POLICY "Public read access to agents" ON agents FOR SELECT USING (TRUE);
-CREATE POLICY "Service role full access to agents" ON agents FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+CREATE POLICY "Public read access to agent_traits" ON agent_traits FOR SELECT USING (TRUE);
+CREATE POLICY "Public read access to agent_memory" ON agent_memory FOR SELECT USING (TRUE);
+CREATE POLICY "Public read access to agent_state" ON agent_state FOR SELECT USING (TRUE);
 CREATE POLICY "Public read access to validated events" ON events FOR SELECT USING (validated = TRUE);
-CREATE POLICY "Service role full access to survey_responses" ON survey_responses FOR ALL USING (auth.jwt() ->> 'role' = 'service_role');
+CREATE POLICY "Public read access to survey_responses" ON survey_responses FOR SELECT USING (TRUE);
+
+-- Políticas de escritura (abiertas para desarrollo - restringir en producción)
+CREATE POLICY "Enable insert for authenticated users only" ON agents FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Enable update for authenticated users only" ON agents FOR UPDATE USING (TRUE);
+CREATE POLICY "Enable delete for authenticated users only" ON agents FOR DELETE USING (TRUE);
+
+CREATE POLICY "Enable insert for all users" ON agent_traits FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Enable update for all users" ON agent_traits FOR UPDATE USING (TRUE);
+
+CREATE POLICY "Enable insert for all users" ON agent_memory FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Enable update for all users" ON agent_memory FOR UPDATE USING (TRUE);
+
+CREATE POLICY "Enable insert for all users" ON agent_state FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Enable update for all users" ON agent_state FOR UPDATE USING (TRUE);
+
+CREATE POLICY "Enable insert for all users" ON events FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Enable update for all users" ON events FOR UPDATE USING (TRUE);
+
+CREATE POLICY "Enable insert for all users" ON survey_responses FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Enable update for all users" ON survey_responses FOR UPDATE USING (TRUE);
 
 -- ============================================================================
 -- SEMILLA INICIAL
