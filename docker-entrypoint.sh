@@ -18,13 +18,25 @@ echo "  VITE_CONVEX_URL='${VITE_CONVEX_URL:-'(NOT SET)'}'"
 echo "  VITE_SUPABASE_ANON_KEY='${VITE_SUPABASE_ANON_KEY:+***SET***}${VITE_SUPABASE_ANON_KEY:-'(NOT SET)'}'"
 echo ""
 
+# Use default production values if not set
+# This ensures the app works even if EasyPanel doesn't pass all variables
+SUPABASE_URL_TO_USE="${VITE_SUPABASE_URL:-https://pulsosocialv2-pulsosocialbdv3.dsb9vm.easypanel.host}"
+SUPABASE_KEY_TO_USE="${VITE_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1bHNvc29jaWFsdjItcHVsc29zb2NpYWxidjMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc0MTcwMjQ1NCwiZXhwIjoxNzU3MjU4NDU0fQ.Cf6U3eP7G0FKlJXG8KqQvZzJxL6LqKqKqKqKqKqKqKq}"
+CONVEX_URL_TO_USE="${VITE_CONVEX_URL:-https://blessed-anaconda-376.convex.cloud}"
+
+echo "Using values:"
+echo "  VITE_SUPABASE_URL: ${SUPABASE_URL_TO_USE}"
+echo "  VITE_CONVEX_URL: ${CONVEX_URL_TO_USE}"
+echo "  VITE_SUPABASE_ANON_KEY: ***set***"
+echo ""
+
 # Create window object with env vars for runtime access
 # This allows changing URLs without rebuild
 cat > /usr/share/nginx/html/env.js << EOF
 window.__ENV__ = {
-  VITE_SUPABASE_URL: "${VITE_SUPABASE_URL}",
-  VITE_SUPABASE_ANON_KEY: "${VITE_SUPABASE_ANON_KEY}",
-  VITE_CONVEX_URL: "${VITE_CONVEX_URL}"
+  VITE_SUPABASE_URL: "${SUPABASE_URL_TO_USE}",
+  VITE_SUPABASE_ANON_KEY: "${SUPABASE_KEY_TO_USE}",
+  VITE_CONVEX_URL: "${CONVEX_URL_TO_USE}"
 };
 EOF
 
