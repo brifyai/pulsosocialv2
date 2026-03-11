@@ -2,19 +2,21 @@
  * Survey Engine - Motor de Encuestas Sintéticas
  * 
  * Este módulo implementa el flujo de respuesta de encuestas:
- * 1. Cargar perfil del agente
+ * 1. Cargar perfil del agente desde Supabase
  * 2. Cargar rasgos de personalidad
  * 3. Cargar memoria resumida
  * 4. Cargar eventos expuestos
  * 5. Calcular probabilidad estructurada
  * 6. Convertir a categoría de respuesta
  * 7. (Opcional) LLM genera texto natural
- * 8. Guardar respuesta con trazabilidad
+ * 8. Guardar respuesta con trazabilidad en Supabase
  */
 
 import { v } from 'convex/values';
 import { query, mutation, action } from './_generated/server';
 import { internal } from './_generated/api';
+import { httpAction } from './_generated/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // ============================================================================
 // CONFIGURACION DEL MOTOR
@@ -408,6 +410,24 @@ function getEducationFactor(education: string): number {
 }
 
 // ============================================================================
+// CLIENTE SUPABASE
+// ============================================================================
+
+function createSupabaseClient(): SupabaseClient {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('SUPABASE_URL y SUPABASE_ANON_KEY deben estar configuradas');
+  }
+  
+  // Nota: Usamos createClient de @supabase/supabase-js
+  // Esto requiere instalar el paquete en Convex
+  const { createClient } = require('@supabase/supabase-js');
+  return createClient(supabaseUrl, supabaseKey);
+}
+
+// ============================================================================
 // FUNCIONES DE UTILIDAD PARA ENCUESTAS
 // ============================================================================
 
@@ -447,9 +467,58 @@ export const getCademCalibrationQuestions = query({
 });
 
 /**
- * Registra respuesta de encuesta
+ * Obtiene datos completos de un agente desde Supabase
  */
-export const registerResponse = mutation({
+export const getAgentData = action({
+  args: { agentId: v.string() },
+  handler: async (ctx, args) => {
+    const supabase = createSupabaseClient();
+    
+    // 1. Obtener datos demográficos
+    const { data: agent, error: agentError } = await supabase
+      .from('agents')
+      .select('*')
+      .eq('id', args.agentId)
+      .single();
+    
+    if (agentError || !agent) {
+      throw new Error(`Agente no encontrado: ${args.agentId}`);
+    }
+    
+    // 2. Obtener rasgos
+    const { data: traits } = await supabase
+      .from('agent_traits')
+      .select('*')
+      .eq('agent_id', args.agentId)
+      .single();
+    
+    // 3. Obtener memoria
+    const { data: memory } = await supabase
+      .from('agent_memory')
+      .select('*')
+      .eq('agent_id', args.agentId)
+      .single();
+    
+    // 4. Obtener estado
+    const { data: state } = await supabase
+      .from('agent_state')
+      .select('*')
+      .eq('agent_id', args.agentId)
+      .single();
+    
+    return {
+      agent,
+      traits: traits || {},
+      memory: memory || {},
+      state: state || {},
+    };
+  },
+});
+
+/**
+ * Registra respuesta de encuesta en Supabase
+ */
+export const registerResponse = action({
   args: {
     runId: v.string(),
     agentId: v.string(),
@@ -460,9 +529,196 @@ export const registerResponse = mutation({
     responseTimeMs: v.number(),
   },
   handler: async (ctx, args) => {
-    // Esta función registraría en Supabase
-    // Por ahora solo loguea
-    console.log('Response registered:', args);
-    return args;
+    const supabase = createSupabaseClient();
+    
+    const { error } = await supabase
+      .from('survey_responses')
+      .insert({
+        run_id: args.runId,
+        agent_id: args.agentId,
+        question_code: args.questionCode,
+        answer_raw: args.answerRaw,
+        answer_structured_json: args.answerStructured,
+        confidence: args.confidence,
+        response_time_ms: args.responseTimeMs,
+      });
+    
+    if (error) {
+      throw new Error(`Error al registrar respuesta: ${error.message}`);
+    }
+    
+    return { success: true };
+  },
+});
+
+/**
+ * Ejecuta encuesta completa a un agente
+ */
+export const executeAgentSurvey = action({
+  args: {
+    runId: v.string(),
+    agentId: v.string(),
+    questions: v.array(v.object({
+      code: v.string(),
+      type: v.string(),
+      topic: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const results = [];
+    
+    // 1. Obtener datos del agente
+    const agentData = await ctx.runAction(internal.surveyEngine.getAgentData, {
+      agentId: args.agentId,
+    });
+    
+    const agentContext: AgentContext = {
+      id: agentData.agent.id,
+      demographics: {
+        region: agentData.agent.region,
+        age: agentData.agent.age,
+        education: agentData.agent.education,
+        income_decile: agentData.agent.income_decile,
+      },
+      traits: {
+        ideology_score: agentData.traits.ideology_score || 0.5,
+        institutional_trust: agentData.traits.institutional_trust || 0.5,
+        risk_aversion: agentData.traits.risk_aversion || 0.5,
+        civic_interest: agentData.traits.civic_interest || 0.5,
+        social_desirability: agentData.traits.social_desirability || 0.5,
+        economic_stress: agentData.state.economic_stress || 0.5,
+      },
+      memory: {
+        previous_positions: agentData.memory.previous_positions || {},
+        salient_topics: agentData.memory.salient_topics || [],
+      },
+      exposedEvents: [],
+    };
+    
+    // 2. Procesar cada pregunta
+    for (const question of args.questions) {
+      const response = computeStructuredResponse({
+        agentContext,
+        questionContext: {
+          code: question.code,
+          type: question.type as any,
+          topic: question.topic,
+        },
+        config: DEFAULT_CONFIG,
+      });
+      
+      // 3. Registrar respuesta
+      await ctx.runAction(internal.surveyEngine.registerResponse, {
+        runId: args.runId,
+        agentId: args.agentId,
+        questionCode: question.code,
+        answerRaw: response.selected_option,
+        answerStructured: response,
+        confidence: response.confidence,
+        responseTimeMs: Math.floor(Math.random() * 5000) + 1000,
+      });
+      
+      results.push({
+        questionCode: question.code,
+        response,
+      });
+    }
+    
+    return results;
+  },
+});
+
+/**
+ * Ejecuta encuesta completa a múltiples agentes
+ */
+export const executeSurveyRun = action({
+  args: {
+    runId: v.string(),
+    surveyId: v.string(),
+    agentIds: v.array(v.string()),
+    questions: v.array(v.object({
+      code: v.string(),
+      type: v.string(),
+      topic: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const allResults = [];
+    
+    for (const agentId of args.agentIds) {
+      try {
+        const results = await ctx.runAction(internal.surveyEngine.executeAgentSurvey, {
+          runId: args.runId,
+          agentId,
+          questions: args.questions,
+        });
+        allResults.push({ agentId, results });
+      } catch (error) {
+        console.error(`Error procesando agente ${agentId}:`, error);
+      }
+    }
+    
+    return {
+      completed: true,
+      totalAgents: args.agentIds.length,
+      successfulAgents: allResults.length,
+    };
+  },
+});
+
+/**
+ * Obtiene resultados agregados de una encuesta
+ */
+export const getSurveyResults = query({
+  args: { runId: v.string() },
+  handler: async (ctx, args) => {
+    const supabase = createSupabaseClient();
+    
+    const { data, error } = await supabase
+      .from('survey_responses')
+      .select(`
+        question_code,
+        answer_structured_json,
+        confidence,
+        agents!inner(region, age, sex, education, income_decile)
+      `)
+      .eq('run_id', args.runId);
+    
+    if (error) {
+      throw new Error(`Error al obtener resultados: ${error.message}`);
+    }
+    
+    // Agrupar por pregunta
+    const byQuestion: Record<string, any[]> = {};
+    for (const response of data || []) {
+      if (!byQuestion[response.question_code]) {
+        byQuestion[response.question_code] = [];
+      }
+      byQuestion[response.question_code].push(response);
+    }
+    
+    // Calcular estadísticas
+    const stats = Object.entries(byQuestion).map(([code, responses]) => {
+      const scores = responses
+        .map(r => r.answer_structured_json?.score)
+        .filter(s => typeof s === 'number');
+      
+      const avgScore = scores.length > 0
+        ? scores.reduce((a, b) => a + b, 0) / scores.length
+        : 0;
+      
+      const avgConfidence = responses
+        .map(r => r.confidence)
+        .reduce((a, b) => a + b, 0) / responses.length;
+      
+      return {
+        questionCode: code,
+        avgScore,
+        avgConfidence,
+        responseCount: responses.length,
+      };
+    });
+    
+    return { stats, raw: data };
   },
 });
