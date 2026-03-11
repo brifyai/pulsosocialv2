@@ -1,12 +1,9 @@
 #!/bin/sh
 set -e
 
-# Inject environment variables into the built JavaScript files
-# This allows runtime environment variable injection for Docker containers
-
 echo "Injecting environment variables..."
 
-# Also create a window object with env vars for runtime access
+# Create window object with env vars for runtime access
 cat > /usr/share/nginx/html/env.js << EOF
 window.__ENV__ = {
   VITE_SUPABASE_URL: "${VITE_SUPABASE_URL}",
@@ -15,16 +12,11 @@ window.__ENV__ = {
 };
 EOF
 
-# Process nginx configuration template with envsubst (even if no variables, ensures file is copied)
-if [ -f /etc/nginx/conf.d/default.conf.template ]; then
-  envsubst '${VITE_SUPABASE_URL} ${VITE_SUPABASE_ANON_KEY} ${VITE_CONVEX_URL}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
-  echo "nginx configuration processed"
-else
-  echo "Warning: nginx template not found"
-fi
+# Copy nginx configuration (no envsubst needed as nginx.conf has no variables)
+cp /etc/nginx/conf.d/default.conf.template /etc/nginx/conf.d/default.conf
+echo "nginx configuration copied"
 
 echo "Environment variables injected successfully"
 echo "Starting nginx..."
 
-# Start nginx
 exec nginx -g 'daemon off;'
