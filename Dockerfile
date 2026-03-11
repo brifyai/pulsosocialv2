@@ -18,7 +18,7 @@ RUN npm install
 COPY . .
 
 # Build the application with environment variables
-# Easypanel passes REACT_APP_* variables, we need to map them to VITE_* for Vite
+# Easypanel passes REACT_APP_* and VITE_* variables
 ARG VITE_CONVEX_URL
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
@@ -32,11 +32,12 @@ ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-${REACT_APP_SUPABASE_URL:-""}}
 ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-${REACT_APP_SUPABASE_ANON_KEY:-""}}
 
 # Debug: Print environment variables during build
-RUN echo "=== Build Environment ==="
-RUN echo "VITE_CONVEX_URL: $VITE_CONVEX_URL"
-RUN echo "VITE_SUPABASE_URL: $VITE_SUPABASE_URL"
-RUN echo "VITE_SUPABASE_ANON_KEY length: ${#VITE_SUPABASE_ANON_KEY}"
+RUN echo "=== Build Environment ===" && \
+    echo "VITE_CONVEX_URL: $VITE_CONVEX_URL" && \
+    echo "VITE_SUPABASE_URL: $VITE_SUPABASE_URL" && \
+    echo "VITE_SUPABASE_ANON_KEY length: ${#VITE_SUPABASE_ANON_KEY}"
 
+# Build the application
 RUN npm run build
 
 # Production stage with nginx
@@ -45,10 +46,10 @@ FROM nginx:alpine
 # Install envsubst for runtime environment variable substitution
 RUN apk add --no-cache gettext
 
-# Copy built files from builder stage FIRST (this changes less often)
+# Copy built files from builder stage
 COPY --from=builder /usr/src/app/dist /usr/share/nginx/html
 
-# Copy nginx configuration template LAST (changes more often, invalidates cache)
+# Copy nginx configuration template
 COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
 # Create script for runtime env injection
