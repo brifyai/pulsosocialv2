@@ -13,10 +13,21 @@ if (import.meta.env.PROD) {
   console.log('[main.tsx] Supabase proxy enabled');
 }
 
+// Fix: Deshabilitar StrictMode en producción para evitar errores con pixi-viewport
+// StrictMode monta/desmonta componentes dos veces en desarrollo, lo que causa
+// problemas con librerías que manejan estado externo como pixi-viewport
+const enableStrictMode = import.meta.env.DEV;
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  enableStrictMode ? (
+    <React.StrictMode>
+      <ConvexClientProvider>
+        <Home />
+      </ConvexClientProvider>
+    </React.StrictMode>
+  ) : (
     <ConvexClientProvider>
       <Home />
     </ConvexClientProvider>
-  </React.StrictMode>,
+  ),
 );
